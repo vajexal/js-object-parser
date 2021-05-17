@@ -44,6 +44,10 @@ class JsObjectParser
         $this->char = $this->position + 1 < \count($this->chars) ? $this->chars[++$this->position] : '';
     }
 
+    /**
+     * @param string[] $strings Accepts only one byte strings
+     * @return bool
+     */
     private function consumeString(string ...$strings): bool
     {
         foreach ($strings as $str) {
