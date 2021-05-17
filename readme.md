@@ -1,5 +1,8 @@
 JS object parser
 
+[![Build Status](https://github.com/vajexal/js-object-parser/workflows/Build/badge.svg)](https://github.com/vajexal/js-object-parser/actions)
+[![codecov](https://codecov.io/gh/vajexal/js-object-parser/branch/master/graph/badge.svg?token=CJRDDKU3P4)](https://codecov.io/gh/vajexal/js-object-parser)
+
 ### Installation
 
 ```bash
