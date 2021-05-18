@@ -15,26 +15,27 @@ class JsObjectParserTest extends TestCase
         $this->assertSame(null, JsObjectParser::parse(''));
     }
 
-    /**
-     * @dataProvider badLiterals
-     */
-    public function testBadLiteral(string $literal)
-    {
-        $this->expectException(ParserException::class);
-
-        JsObjectParser::parse($literal);
-    }
-
     public function badLiterals(): array
     {
         return [
-            [','],
-            ['null,'],
-            ['NULL'],
-            ['FALSE'],
-            ['TRUE'],
-            ['foo'],
+            [',', "Unexpected char ',' at 0"],
+            ['null,', "Unexpected char ',' at 4"],
+            ['NULL', 'Unexpected identifier "NULL"'],
+            ['FALSE', 'Unexpected identifier "FALSE"'],
+            ['TRUE', 'Unexpected identifier "TRUE"'],
+            ['foo', 'Unexpected identifier "foo"'],
         ];
+    }
+
+    /**
+     * @dataProvider badLiterals
+     */
+    public function testBadLiteral(string $literal, string $message)
+    {
+        $this->expectException(ParserException::class);
+        $this->expectExceptionMessage($message);
+
+        JsObjectParser::parse($literal);
     }
 
     public function testNullLiteral()
@@ -52,35 +53,35 @@ class JsObjectParserTest extends TestCase
     public function badNumerics(): array
     {
         return [
-            ['1a'],
-            ['10nn'],
-            ['0b'],
-            ['0b102'],
-            ['0b1__0'],
-            ['0b_1'],
-            ['0o'],
-            ['0o18'],
-            ['0o1__7'],
-            ['0x'],
-            ['0x1__f'],
-            ['0x1g'],
-            ['_1'],
-            ['1_'],
-            ['..2'],
-            ['.e'],
-            ['.e2'],
-            ['.e2'],
-            ['1e'],
-            ['.2n'],
+            ['1a', "Unexpected char 'a' at 1"],
+            ['10nn', "Unexpected char 'n' at 3"],
+            ['0b', 'No binary digits after "0b"'],
+            ['0b102', "Unexpected char '2' at 4"],
+            ['0b1__0', "Unexpected char '_' at 3"],
+            ['0b_1', "Unexpected char '_' at 2"],
+            ['0o', 'No octal digits after "0o"'],
+            ['0o18', "Unexpected char '8' at 3"],
+            ['0o1__7', "Unexpected char '_' at 3"],
+            ['0x', 'No hexadecimal digits after "0x"'],
+            ['0x1__f', "Unexpected char '_' at 3"],
+            ['0x1g', "Unexpected char 'g' at 3"],
+            ['_1', 'Unexpected identifier "_1"'],
+            ['1_', "Unexpected char '_' at 1"],
+            ['..2', "Unexpected char '.' at 1"],
+            ['.e', "Unexpected char '.' at 0"],
+            ['.e2', "Unexpected char '.' at 0"],
+            ['1e', "Invalid decimal"],
+            ['.2n', "Unexpected char 'n' at 2"],
         ];
     }
 
     /**
      * @dataProvider badNumerics
      */
-    public function testBadNumeric(string $numeric)
+    public function testBadNumeric(string $numeric, string $message)
     {
         $this->expectException(ParserException::class);
+        $this->expectExceptionMessage($message);
 
         JsObjectParser::parse($numeric);
     }
@@ -112,22 +113,23 @@ class JsObjectParserTest extends TestCase
     public function badStrings(): array
     {
         return [
-            ['"foo'],
-            ["'foo"],
-            ['foo"'],
-            ['"f"oo"'],
-            ["'f'oo'"],
+            ['"foo', 'Unexpected end of input'],
+            ["'foo", 'Unexpected end of input'],
+            ['foo"', 'Unexpected identifier "foo"'],
+            ['"f"oo"', "Unexpected char 'o' at 3"],
+            ["'f'oo'", "Unexpected char 'o' at 3"],
         ];
     }
 
     /**
      * @dataProvider badStrings
      */
-    public function testBadString(string $s)
+    public function testBadString(string $str, string $message)
     {
         $this->expectException(ParserException::class);
+        $this->expectExceptionMessage($message);
 
-        JsObjectParser::parse($s);
+        JsObjectParser::parse($str);
     }
 
     public function testStringLiteral()
@@ -144,22 +146,23 @@ class JsObjectParserTest extends TestCase
     public function badArrays(): array
     {
         return [
-            ['['],
-            [']'],
-            ['[1, []'],
-            ['[1, ]]'],
-            ['["foo" => "bar"]'],
-            ['["foo": "bar"]'],
-            ['[1 2]'],
+            ['[', 'Unexpected end of input'],
+            [']', "Unexpected char ']' at 0"],
+            ['[1, []', 'Unexpected end of input'],
+            ['[1, ]]', "Unexpected char ']' at 5"],
+            ['["foo" => "bar"]', "Unexpected char '=' at 7, expected ','"],
+            ['["foo": "bar"]', "Unexpected char ':' at 6, expected ','"],
+            ['[1 2]', "Unexpected char '2' at 3, expected ','"],
         ];
     }
 
     /**
      * @dataProvider badArrays
      */
-    public function testBadArray(string $arr)
+    public function testBadArray(string $arr, string $message)
     {
         $this->expectException(ParserException::class);
+        $this->expectExceptionMessage($message);
 
         JsObjectParser::parse($arr);
     }
@@ -175,22 +178,22 @@ class JsObjectParserTest extends TestCase
     public function badObjects(): array
     {
         return [
-            ['{'],
-            ['}'],
-            ['{"foo": "bar", {}'],
-            ['{"foo": "bar", }}'],
-            ['{"foo" => "bar"}'],
-            ['{1: 2 "foo": "bar"}'],
-            ['{"": false}'],
+            ['{', 'Unexpected end of input'],
+            ['}', "Unexpected char '}' at 0"],
+            ['{"foo": "bar", {}', "Unexpected char '{' at 15"],
+            ['{"foo": "bar", }}', "Unexpected char '}' at 16"],
+            ['{"foo" => "bar"}', "Unexpected char '=' at 7, expected ':'"],
+            ['{1: 2 "foo": "bar"}', "Unexpected char '\"' at 6, expected ','"],
         ];
     }
 
     /**
      * @dataProvider badObjects
      */
-    public function testBadObject(string $obj)
+    public function testBadObject(string $obj, string $message)
     {
         $this->expectException(ParserException::class);
+        $this->expectExceptionMessage($message);
 
         JsObjectParser::parse($obj);
     }

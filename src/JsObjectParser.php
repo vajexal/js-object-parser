@@ -22,7 +22,7 @@ class JsObjectParser
 
         $chars = preg_split('//u', $str, -1, PREG_SPLIT_NO_EMPTY);
         if ($chars === false) {
-            $this->parseError('could not split string into array of chars');
+            $this->parseError('Could not split string into array of chars');
         }
         $this->chars = $chars;
 
@@ -42,6 +42,18 @@ class JsObjectParser
     private function nextChar(): void
     {
         $this->char = $this->position + 1 < \count($this->chars) ? $this->chars[++$this->position] : '';
+    }
+
+    private function prevChar(): void
+    {
+        $this->char = $this->position > 0 ? $this->chars[--$this->position] : '';
+    }
+
+    private function moveTo(int $position): void
+    {
+        if ($position >= 0 && $position < \count($this->chars)) {
+            $this->position = $position;
+        }
     }
 
     /**
@@ -127,6 +139,12 @@ class JsObjectParser
 
         if ($this->char === '{') {
             return $this->parseObject();
+        }
+
+        $identifier = $this->parseIdentifierName();
+        if ($identifier) {
+            $this->moveTo($this->position - \strlen($identifier)); // todo unicode
+            $this->parseError(sprintf('Unexpected identifier "%s"', $identifier));
         }
 
         $this->unexpectedChar();
@@ -261,7 +279,8 @@ class JsObjectParser
 
         if ($this->char === 'e' || $this->char === 'E') {
             if ($number === '.') {
-                $this->parseError('empty number before exponent');
+                $this->prevChar();
+                $this->unexpectedChar();
             }
 
             $number .= 'e';
@@ -275,7 +294,8 @@ class JsObjectParser
             $number .= $exponentPart = $this->parseDecimalDigits();
 
             if ($exponentPart === '') {
-                $this->parseError('empty exponent part');
+                $this->moveTo($this->position - \strlen($number)); // todo unicode
+                $this->parseError('Invalid decimal');
             }
         }
 
@@ -336,7 +356,7 @@ class JsObjectParser
             $str .= $this->char;
         } while ($this->char !== '');
 
-        $this->parseError('Unexpected EOF');
+        $this->unexpectedEndOfInput();
     }
 
     private function parseIdentifierName(): string
@@ -372,6 +392,10 @@ class JsObjectParser
         while ($this->char !== ']') {
             $this->skipSpaces();
 
+            if ($this->char === '') {
+                $this->unexpectedEndOfInput();
+            }
+
             if ($this->char === ',') {
                 $index++;
                 $this->nextChar();
@@ -385,6 +409,10 @@ class JsObjectParser
             $elements[$index] = $this->parseExpression();
 
             $this->skipSpaces();
+
+            if ($this->char === '') {
+                $this->unexpectedEndOfInput();
+            }
 
             if ($this->char === ']') {
                 break;
@@ -411,16 +439,16 @@ class JsObjectParser
         while ($this->char !== '}') {
             $this->skipSpaces();
 
+            if ($this->char === '') {
+                $this->unexpectedEndOfInput();
+            }
+
             if ($this->char >= '0' && $this->char <= '9' || $this->char === '.') {
                 $key = (int) $this->parseDecimalDigits();
             } elseif ($this->char === '"' || $this->char === "'") {
                 $key = $this->parseString();
             } else {
                 $key = $this->parseIdentifierName();
-            }
-
-            if (\is_string($key) && $key === '') {
-                $this->parseError('empty key');
             }
 
             $this->skipSpaces();
@@ -467,12 +495,17 @@ class JsObjectParser
 
     private function unexpectedChar(string $expected = ''): void
     {
-        $message = "unexpected char '{$this->char}' at {$this->position}";
+        $message = "Unexpected char '{$this->char}' at {$this->position}";
 
         if ($expected !== '') {
             $message .= ", expected '{$expected}'";
         }
 
         $this->parseError($message);
+    }
+
+    private function unexpectedEndOfInput(): void
+    {
+        $this->parseError('Unexpected end of input');
     }
 }
