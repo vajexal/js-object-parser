@@ -207,5 +207,58 @@ JSON
         ));
     }
 
-    // todo maybe some complex test
+    public function testComplex()
+    {
+        $this->assertSame(['Ó', true], JsObjectParser::parse('["Ó", true]'));
+        $this->assertSame(
+            [
+                'name'    => 'Jim',
+                'age'     => 21,
+                'friends' => [
+                    [
+                        'name'    => 'Sara',
+                        'age'     => 23,
+                        'friends' => [
+                            [
+                                'name'    => 'Bob',
+                                'age'     => 45,
+                                'friends' => [],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name'    => 'George',
+                        'age'     => 22,
+                        'friends' => [],
+                    ],
+                ],
+            ],
+            JsObjectParser::parse(<<<'JSON'
+{
+    name: 'Jim',
+    age: 21,
+    friends: [
+        {
+            name: 'Sara',
+            age: 23,
+            friends: [
+                {
+                    name: "Bob",
+                    age: 45,
+                    friends: [],
+                }
+            ]
+        },
+        {
+            name: 'George',
+            age: 22,
+            friends: [
+            ]
+        }
+    ]
+}
+JSON
+            )
+        );
+    }
 }
