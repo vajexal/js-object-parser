@@ -117,7 +117,6 @@ class JsObjectParser
             return $this->parseNumeric();
         }
 
-        // todo "`"
         if ($this->char === '"' || $this->char === "'") {
             return $this->parseString();
         }
@@ -394,7 +393,7 @@ class JsObjectParser
 
             if ($this->char >= '0' && $this->char <= '9' || $this->char === '.') {
                 $key = (int) $this->parseDecimalDigits();
-            } elseif ($this->char === '"' || $this->char === "'") { // todo "`"
+            } elseif ($this->char === '"' || $this->char === "'") {
                 $key = $this->parseString();
             } else {
                 $key = $this->parseIdentifierName();
