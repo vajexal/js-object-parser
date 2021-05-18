@@ -150,6 +150,7 @@ class JsObjectParserTest extends TestCase
             ['[1, ]]'],
             ['["foo" => "bar"]'],
             ['["foo": "bar"]'],
+            ['[1 2]'],
         ];
     }
 
@@ -168,6 +169,7 @@ class JsObjectParserTest extends TestCase
         $this->assertSame([], JsObjectParser::parse('[]'));
         $this->assertSame([123, 'foo'], JsObjectParser::parse('[123, "foo"]'));
         $this->assertSame([[1]], JsObjectParser::parse('[[1]]'));
+        $this->assertSame([2 => 2, 4 => 4], JsObjectParser::parse('[,,2,,4]'));
     }
 
     public function badObjects(): array

@@ -366,16 +366,36 @@ class JsObjectParser
     private function parseArray(): array
     {
         $elements = [];
+        $index    = 0;
         $this->nextChar();
 
         while ($this->char !== ']') {
-            // todo element index
-            if ($this->char === ',' || \in_array($this->char, self::SPACES, true)) {
+            $this->skipSpaces();
+
+            if ($this->char === ',') {
+                $index++;
                 $this->nextChar();
                 continue;
             }
 
-            $elements[] = $this->parseExpression();
+            if ($this->char === ']') {
+                break;
+            }
+
+            $elements[$index] = $this->parseExpression();
+
+            $this->skipSpaces();
+
+            if ($this->char === ']') {
+                break;
+            }
+
+            if ($this->char !== ',') {
+                $this->unexpectedChar(',');
+            }
+
+            $index++;
+            $this->nextChar();
         }
 
         $this->nextChar();
