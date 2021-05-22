@@ -173,6 +173,7 @@ class JsObjectParserTest extends TestCase
         $this->assertSame([123, 'foo'], JsObjectParser::parse('[123, "foo"]'));
         $this->assertSame([[1]], JsObjectParser::parse('[[1]]'));
         $this->assertSame([2 => 2, 4 => 4], JsObjectParser::parse('[,,2,,4]'));
+        $this->assertSame(['Ó', true], JsObjectParser::parse('["Ó", true]'));
     }
 
     public function badObjects(): array
@@ -180,10 +181,18 @@ class JsObjectParserTest extends TestCase
         return [
             ['{', 'Unexpected end of input'],
             ['}', "Unexpected char '}' at 0"],
+            ['{1: 2', 'Unexpected end of input'],
             ['{"foo": "bar", {}', "Unexpected char '{' at 15"],
             ['{"foo": "bar", }}', "Unexpected char '}' at 16"],
             ['{"foo" => "bar"}', "Unexpected char '=' at 7, expected ':'"],
             ['{1: 2 "foo": "bar"}', "Unexpected char '\"' at 6, expected ','"],
+            ['{1a: 1}', "Unexpected char 'a' at 2"],
+            ['{: 1}', "Unexpected char ':' at 1"],
+            ['{\u{}: 1}', "Invalid Unicode escape sequence at 1"],
+            ['{\u{00_5F}: 1}', "Unexpected char '_' at 6"],
+            ['{\u{g}: 1}', "Unexpected char 'g' at 4"],
+            ['{\u5F: 1}', "Invalid Unicode escape sequence at 1"],
+            ['{\uffff: 1}', "Invalid Unicode escape sequence at 1"],
         ];
     }
 
@@ -202,6 +211,13 @@ class JsObjectParserTest extends TestCase
     {
         $this->assertSame([], JsObjectParser::parse('{}'));
         $this->assertSame(['foo' => 'bar'], JsObjectParser::parse('{foo: "bar"}'));
+        $this->assertSame(['foo' => 'baz'], JsObjectParser::parse('{foo: "bar", foo: "baz"}'));
+        $this->assertSame(['' => 1], JsObjectParser::parse('{"": 1}'));
+        $this->assertSame(['Ó' => 1], JsObjectParser::parse('{Ó: 1}'));
+        $this->assertSame(
+            ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4],
+            JsObjectParser::parse('{\u0061: 1, \u{62}: 2, \u{0063}: 3, \u{000064}: 4}')
+        );
         $this->assertSame([1 => 2, 'foo' => 'bar', 'baz' => 'quux'], JsObjectParser::parse(<<<'JSON'
 {
     1: 2,
@@ -214,7 +230,6 @@ JSON
 
     public function testComplex()
     {
-        $this->assertSame(['Ó', true], JsObjectParser::parse('["Ó", true]'));
         $this->assertSame(
             [
                 'name'    => 'Jim',

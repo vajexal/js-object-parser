@@ -10,6 +10,16 @@ class JsObjectParser
 {
     private const SPACES = [' ', "\t", "\n", "\r", "\0", "\x0B"];
 
+    private const ID_START_PATTERN    = '/^[\p{L}\p{Nl}]$/u';
+    private const ID_CONTINUE_PATTERN = '/^[\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}]$/u';
+    private const OTHER_ID_START      = ["\u{2118}", "\u{212E}", "\u{309B}", "\u{309C}"];
+    private const OTHER_ID_CONTINUE   = ["\u{1369}", "\u{00B7}", "\u{0387}", "\u{19DA}"];
+
+    private const ZWNJ = "\u{200C}";
+    private const ZWJ  = "\u{200D}";
+
+    private const MAX_CODE_POINT_VALUE = 0x10ffff;
+
     private string $str;
     /** @var string[] */
     private array  $chars;
@@ -141,9 +151,10 @@ class JsObjectParser
             return $this->parseObject();
         }
 
-        $identifier = $this->parseIdentifierName();
+        $startPosition = $this->position;
+        $identifier    = $this->parseIdentifierName();
         if ($identifier) {
-            $this->moveTo($this->position - \strlen($identifier)); // todo unicode
+            $this->moveTo($startPosition);
             $this->parseError(sprintf('Unexpected identifier "%s"', $identifier));
         }
 
@@ -266,8 +277,9 @@ class JsObjectParser
 
     private function parseDecimal(): float|int
     {
-        $isFloat = false;
-        $number  = $this->parseDecimalDigits();
+        $isFloat       = false;
+        $startPosition = $this->position;
+        $number        = $this->parseDecimalDigits();
 
         if ($this->char === '.') {
             $number  .= $this->char;
@@ -294,7 +306,7 @@ class JsObjectParser
             $number .= $exponentPart = $this->parseDecimalDigits();
 
             if ($exponentPart === '') {
-                $this->moveTo($this->position - \strlen($number)); // todo unicode
+                $this->moveTo($startPosition);
                 $this->parseError('Invalid decimal');
             }
         }
@@ -363,24 +375,111 @@ class JsObjectParser
     {
         $name = '';
 
-        // todo unicode
-        if ($this->char === '$' || $this->char === '_' || ($this->char >= 'a' && $this->char <= 'z') || ($this->char >= 'A' && $this->char <= 'Z')) {
-            $name .= $this->char;
-            $this->nextChar();
-        } else {
-            $this->unexpectedChar();
-        }
-
-        while (
-            $this->char === '_' ||
+        if ($this->consumeString('\\u')) {
+            $startPosition = $this->position - 2;
+            $name          .= $unicodeChar = $this->parseUnicodeEscapeSequence();
+            if (!preg_match(self::ID_START_PATTERN, $unicodeChar)) {
+                $this->invalidUnicodeEscapeSequence($startPosition);
+            }
+        } elseif (
+            $this->char === '$' || $this->char === '_' ||
             ($this->char >= 'a' && $this->char <= 'z') || ($this->char >= 'A' && $this->char <= 'Z') ||
-            ($this->char >= '0' && $this->char <= '9')
+            preg_match(self::ID_START_PATTERN, $this->char) ||
+            \in_array($this->char, self::OTHER_ID_START, true)
         ) {
             $name .= $this->char;
             $this->nextChar();
+        } else {
+            return $name;
+        }
+
+        while (true) {
+            if ($this->consumeString('\\u')) {
+                $startPosition = $this->position - 2;
+                $name          .= $unicodeChar = $this->parseUnicodeEscapeSequence();
+                if (!preg_match(self::ID_CONTINUE_PATTERN, $unicodeChar)) {
+                    $this->invalidUnicodeEscapeSequence($startPosition);
+                }
+                continue;
+            }
+
+            if (
+                $this->char === '$' || $this->char === '_' ||
+                ($this->char >= 'a' && $this->char <= 'z') || ($this->char >= 'A' && $this->char <= 'Z') ||
+                ($this->char >= '0' && $this->char <= '9') ||
+                preg_match(self::ID_CONTINUE_PATTERN, $this->char) ||
+                \in_array($this->char, self::OTHER_ID_START, true) || \in_array($this->char, self::OTHER_ID_CONTINUE, true) ||
+                $this->char === self::ZWNJ || $this->char === self::ZWJ
+            ) {
+                $name .= $this->char;
+                $this->nextChar();
+                continue;
+            }
+
+            break;
         }
 
         return $name;
+    }
+
+    private function parseUnicodeEscapeSequence(): string
+    {
+        $startPosition = $this->position - 2;
+        $code          = $this->char === '{' ? $this->parseCodePoint() : $this->parseHex4DigitsUnicodeEscapeSequence();
+
+        $code = (int) hexdec($code);
+
+        if ($code > self::MAX_CODE_POINT_VALUE) {
+            $this->invalidUnicodeEscapeSequence($startPosition);
+        }
+
+        $char = mb_chr($code);
+        if ($char === false) {
+            $this->invalidUnicodeEscapeSequence($startPosition);
+        }
+
+        return $char;
+    }
+
+    private function parseCodePoint(): string
+    {
+        $code          = '';
+        $startPosition = $this->position - 2;
+        $this->nextChar();
+
+        while ($this->char !== '}') {
+            if (($this->char >= '0' && $this->char <= '9') || ($this->char >= 'a' && $this->char <= 'f') || ($this->char >= 'A' && $this->char <= 'F')) {
+                $code .= $this->char;
+                $this->nextChar();
+            } else {
+                $this->unexpectedChar();
+            }
+        }
+
+        $this->nextChar();
+
+        if (\strlen($code) === 0) {
+            $this->invalidUnicodeEscapeSequence($startPosition);
+        }
+
+        return $code;
+    }
+
+    private function parseHex4DigitsUnicodeEscapeSequence(): string
+    {
+        $code          = '';
+        $startPosition = $this->position - 2;
+
+        for ($i = 0; $i < 4; $i++) {
+            if (($this->char >= '0' && $this->char <= '9') || ($this->char >= 'a' && $this->char <= 'f') || ($this->char >= 'A' && $this->char <= 'F')) {
+                $code .= $this->char;
+                $this->nextChar();
+            } else {
+                $this->invalidUnicodeEscapeSequence($startPosition);
+            }
+        }
+
+        return $code;
     }
 
     private function parseArray(): array
@@ -449,6 +548,9 @@ class JsObjectParser
                 $key = $this->parseString();
             } else {
                 $key = $this->parseIdentifierName();
+                if (\strlen($key) === 0) {
+                    $this->unexpectedChar();
+                }
             }
 
             $this->skipSpaces();
@@ -463,6 +565,10 @@ class JsObjectParser
             $object[$key] = $this->parseExpression();
 
             $this->skipSpaces();
+
+            if ($this->char === '') {
+                $this->unexpectedEndOfInput();
+            }
 
             if ($this->char === '}') {
                 break;
@@ -507,5 +613,11 @@ class JsObjectParser
     private function unexpectedEndOfInput(): void
     {
         $this->parseError('Unexpected end of input');
+    }
+
+    private function invalidUnicodeEscapeSequence(int $position): void
+    {
+        $this->moveTo($position);
+        $this->parseError("Invalid Unicode escape sequence at {$this->position}");
     }
 }
