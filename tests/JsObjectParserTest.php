@@ -118,6 +118,8 @@ class JsObjectParserTest extends TestCase
             ['foo"', 'Unexpected identifier "foo"'],
             ['"f"oo"', "Unexpected char 'o' at 3"],
             ["'f'oo'", "Unexpected char 'o' at 3"],
+            ["'\n'", "Unexpected line terminator at 1"],
+            ["'\r\n'", "Unexpected line terminator at 1"],
         ];
     }
 
@@ -141,6 +143,15 @@ class JsObjectParserTest extends TestCase
         $this->assertSame('f"oo', JsObjectParser::parse("'f\"oo'"));
         $this->assertSame('f"oo', JsObjectParser::parse('"f\\"oo"'));
         $this->assertSame("f'oo", JsObjectParser::parse("'f\\'oo'"));
+        $this->assertSame("\0", JsObjectParser::parse("'\\0'"));
+        $this->assertSame("\0" . '3', JsObjectParser::parse("'\\03'"));
+        $this->assertSame('_', JsObjectParser::parse("'\\x5F'"));
+        $this->assertSame('_', JsObjectParser::parse("'\\u005F'"));
+        $this->assertSame('_', JsObjectParser::parse("'\\u{5F}'"));
+        $this->assertSame("'", JsObjectParser::parse("'\\''"));
+        $this->assertSame("\n", JsObjectParser::parse("'\\n'"));
+        $this->assertSame("\n", JsObjectParser::parse("'\\\n'"));
+        $this->assertSame("\r\n", JsObjectParser::parse("'\\\r\n'"));
     }
 
     public function badArrays(): array

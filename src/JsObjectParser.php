@@ -20,6 +20,31 @@ class JsObjectParser
 
     private const MAX_CODE_POINT_VALUE = 0x10ffff;
 
+    private const SINGLE_ESCAPE_CHARACTERS = [
+        '\'' => '\'',
+        '"'  => '"',
+        '\\' => '\\',
+        'b'  => "\u{0008}",
+        'f'  => "\u{000C}",
+        'n'  => "\u{000A}",
+        'r'  => "\u{000D}",
+        't'  => "\u{0009}",
+        'v'  => "\u{000B}",
+    ];
+
+    private const LF   = "\u{000A}";
+    private const CR   = "\u{000D}";
+    private const LS   = "\u{2028}";
+    private const PS   = "\u{2029}";
+    private const CRLF = self::CR . self::LF;
+
+    private const LINE_TERMINATORS = [
+        self::LF,
+        self::CR,
+        self::LS,
+        self::PS,
+    ];
+
     private string $str;
     /** @var string[] */
     private array  $chars;
@@ -351,22 +376,46 @@ class JsObjectParser
     {
         $str        = '';
         $terminator = $this->char;
+        $this->nextChar();
 
-        do {
-            $this->nextChar();
-
-            if ($this->char === $terminator && $this->behind() !== '\\') {
+        while ($this->char !== '') {
+            if ($this->char === $terminator) {
                 $this->nextChar();
                 return $str;
             }
 
-            // todo all escaped chars
             if ($this->char === '\\') {
                 $this->nextChar();
+
+                if ($this->char === '0') {
+                    $str .= "\0";
+                    $this->nextChar();
+                } elseif ($this->char === 'x') {
+                    $this->nextChar();
+                    $str .= $this->parseHexEscapeSequence();
+                } elseif ($this->char === 'u') {
+                    $this->nextChar();
+                    $str .= $this->parseUnicodeEscapeSequence();
+                } elseif (isset(self::SINGLE_ESCAPE_CHARACTERS[$this->char])) {
+                    $str .= self::SINGLE_ESCAPE_CHARACTERS[$this->char];
+                    $this->nextChar();
+                } elseif ($this->consumeString(self::CRLF)) {
+                    $str .= self::CRLF;
+                } elseif (\in_array($this->char, self::LINE_TERMINATORS, true)) {
+                    $str .= $this->char;
+                    $this->nextChar();
+                }
+
+                continue;
+            }
+
+            if ($this->char === self::LF || $this->char === self::CR) {
+                $this->parseError("Unexpected line terminator at {$this->position}");
             }
 
             $str .= $this->char;
-        } while ($this->char !== '');
+            $this->nextChar();
+        }
 
         $this->unexpectedEndOfInput();
     }
@@ -458,7 +507,7 @@ class JsObjectParser
 
         $this->nextChar();
 
-        if (\strlen($code) === 0) {
+        if ($code === '') {
             $this->invalidUnicodeEscapeSequence($startPosition);
         }
 
@@ -480,6 +529,30 @@ class JsObjectParser
         }
 
         return $code;
+    }
+
+    private function parseHexEscapeSequence(): string
+    {
+        $code          = '';
+        $startPosition = $this->position - 2;
+
+        for ($i = 0; $i < 2; $i++) {
+            if (($this->char >= '0' && $this->char <= '9') || ($this->char >= 'a' && $this->char <= 'f') || ($this->char >= 'A' && $this->char <= 'F')) {
+                $code .= $this->char;
+                $this->nextChar();
+            } else {
+                $this->unexpectedChar();
+            }
+        }
+
+        $code = (int) hexdec($code);
+
+        $char = mb_chr($code);
+        if ($char === false) {
+            $this->invalidHexadecimalEscapeSequence($startPosition);
+        }
+
+        return $char;
     }
 
     private function parseArray(): array
@@ -548,7 +621,7 @@ class JsObjectParser
                 $key = $this->parseString();
             } else {
                 $key = $this->parseIdentifierName();
-                if (\strlen($key) === 0) {
+                if ($key === '') {
                     $this->unexpectedChar();
                 }
             }
@@ -619,5 +692,11 @@ class JsObjectParser
     {
         $this->moveTo($position);
         $this->parseError("Invalid Unicode escape sequence at {$this->position}");
+    }
+
+    private function invalidHexadecimalEscapeSequence(int $position): void
+    {
+        $this->moveTo($position);
+        $this->parseError("Invalid hexadecimal escape sequence at {$this->position}");
     }
 }
