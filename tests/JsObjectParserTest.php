@@ -120,6 +120,8 @@ class JsObjectParserTest extends TestCase
             ["'f'oo'", "Unexpected char 'o' at 3"],
             ["'\n'", "Unexpected line terminator at 1"],
             ["'\r\n'", "Unexpected line terminator at 1"],
+            ["'\\u{ffffff}'", "Invalid Unicode escape sequence at 1"],
+            ["'\\x1g'", "Unexpected char 'g' at 4"],
         ];
     }
 
@@ -145,9 +147,7 @@ class JsObjectParserTest extends TestCase
         $this->assertSame("f'oo", JsObjectParser::parse("'f\\'oo'"));
         $this->assertSame("\0", JsObjectParser::parse("'\\0'"));
         $this->assertSame("\0" . '3', JsObjectParser::parse("'\\03'"));
-        $this->assertSame('_', JsObjectParser::parse("'\\x5F'"));
-        $this->assertSame('_', JsObjectParser::parse("'\\u005F'"));
-        $this->assertSame('_', JsObjectParser::parse("'\\u{5F}'"));
+        $this->assertSame('a_b', JsObjectParser::parse("'\\x61\\u005F\\u{62}'"));
         $this->assertSame("'", JsObjectParser::parse("'\\''"));
         $this->assertSame("\n", JsObjectParser::parse("'\\n'"));
         $this->assertSame("\n", JsObjectParser::parse("'\\\n'"));
@@ -225,10 +225,7 @@ class JsObjectParserTest extends TestCase
         $this->assertSame(['foo' => 'baz'], JsObjectParser::parse('{foo: "bar", foo: "baz"}'));
         $this->assertSame(['' => 1], JsObjectParser::parse('{"": 1}'));
         $this->assertSame(['Ó' => 1], JsObjectParser::parse('{Ó: 1}'));
-        $this->assertSame(
-            ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4],
-            JsObjectParser::parse('{\u0061: 1, \u{62}: 2, \u{0063}: 3, \u{000064}: 4}')
-        );
+        $this->assertSame(['ab' => 1, 'cd' => 2], JsObjectParser::parse('{\u0061\u{62}: 1, \u{0063}\u{000064}: 2}'));
         $this->assertSame([1 => 2, 'foo' => 'bar', 'baz' => 'quux'], JsObjectParser::parse(<<<'JSON'
 {
     1: 2,
