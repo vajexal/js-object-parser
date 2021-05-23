@@ -422,20 +422,16 @@ class JsObjectParser
 
     private function parseIdentifierName(): string
     {
+        // todo refactor
         $name = '';
 
         if ($this->consumeString('\\u')) {
             $startPosition = $this->position - 2;
             $name          .= $unicodeChar = $this->parseUnicodeEscapeSequence();
-            if (!preg_match(self::ID_START_PATTERN, $unicodeChar)) {
+            if (!$this->checkIdentifierStart($unicodeChar)) {
                 $this->invalidUnicodeEscapeSequence($startPosition);
             }
-        } elseif (
-            $this->char === '$' || $this->char === '_' ||
-            ($this->char >= 'a' && $this->char <= 'z') || ($this->char >= 'A' && $this->char <= 'Z') ||
-            preg_match(self::ID_START_PATTERN, $this->char) ||
-            \in_array($this->char, self::OTHER_ID_START, true)
-        ) {
+        } elseif ($this->checkIdentifierStart($this->char)) {
             $name .= $this->char;
             $this->nextChar();
         } else {
@@ -446,20 +442,13 @@ class JsObjectParser
             if ($this->consumeString('\\u')) {
                 $startPosition = $this->position - 2;
                 $name          .= $unicodeChar = $this->parseUnicodeEscapeSequence();
-                if (!preg_match(self::ID_CONTINUE_PATTERN, $unicodeChar)) {
+                if (!$this->checkIdentifierPart($unicodeChar)) {
                     $this->invalidUnicodeEscapeSequence($startPosition);
                 }
                 continue;
             }
 
-            if (
-                $this->char === '$' || $this->char === '_' ||
-                ($this->char >= 'a' && $this->char <= 'z') || ($this->char >= 'A' && $this->char <= 'Z') ||
-                ($this->char >= '0' && $this->char <= '9') ||
-                preg_match(self::ID_CONTINUE_PATTERN, $this->char) ||
-                \in_array($this->char, self::OTHER_ID_START, true) || \in_array($this->char, self::OTHER_ID_CONTINUE, true) ||
-                $this->char === self::ZWNJ || $this->char === self::ZWJ
-            ) {
+            if ($this->checkIdentifierPart($this->char)) {
                 $name .= $this->char;
                 $this->nextChar();
                 continue;
@@ -469,6 +458,24 @@ class JsObjectParser
         }
 
         return $name;
+    }
+
+    private function checkIdentifierStart(string $char): bool
+    {
+        return $char === '$' || $char === '_' ||
+               ($char >= 'a' && $char <= 'z') || ($char >= 'A' && $char <= 'Z') ||
+               preg_match(self::ID_START_PATTERN, $char) ||
+               \in_array($char, self::OTHER_ID_START, true);
+    }
+
+    private function checkIdentifierPart(string $char): bool
+    {
+        return $char === '$' || $char === '_' ||
+               ($char >= 'a' && $char <= 'z') || ($char >= 'A' && $char <= 'Z') ||
+               ($char >= '0' && $char <= '9') ||
+               preg_match(self::ID_CONTINUE_PATTERN, $char) ||
+               \in_array($char, self::OTHER_ID_START, true) || \in_array($char, self::OTHER_ID_CONTINUE, true) ||
+               $char === self::ZWNJ || $char === self::ZWJ;
     }
 
     private function parseUnicodeEscapeSequence(): string

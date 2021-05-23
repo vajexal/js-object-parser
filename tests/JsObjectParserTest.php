@@ -204,6 +204,8 @@ class JsObjectParserTest extends TestCase
             ['{\u{g}: 1}', "Unexpected char 'g' at 4"],
             ['{\u5F: 1}', "Invalid Unicode escape sequence at 1"],
             ['{\uffff: 1}', "Invalid Unicode escape sequence at 1"],
+            ['{\u{5f}\u0020: 1}', "Invalid Unicode escape sequence at 7"],
+            ['{\u{31}\u005f: 1}', "Invalid Unicode escape sequence at 1"],
         ];
     }
 
@@ -225,7 +227,7 @@ class JsObjectParserTest extends TestCase
         $this->assertSame(['foo' => 'baz'], JsObjectParser::parse('{foo: "bar", foo: "baz"}'));
         $this->assertSame(['' => 1], JsObjectParser::parse('{"": 1}'));
         $this->assertSame(['Ó' => 1], JsObjectParser::parse('{Ó: 1}'));
-        $this->assertSame(['ab' => 1, 'cd' => 2], JsObjectParser::parse('{\u0061\u{62}: 1, \u{0063}\u{000064}: 2}'));
+        $this->assertSame(['a1' => 1, '_b' => 2, "\$\u{200C}" => 3], JsObjectParser::parse('{\u0061\u{31}: 1, \u{005f}\u{000062}: 2, \u{024}\u200C: 3}'));
         $this->assertSame([1 => 2, 'foo' => 'bar', 'baz' => 'quux'], JsObjectParser::parse(<<<'JSON'
 {
     1: 2,
