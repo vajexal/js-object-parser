@@ -1,6 +1,7 @@
 {
     "name": "vajexal/js-object-parser",
     "description": "JS object parser",
+    "license": "Unlicense",
     "require": {
         "php": "^8.0",
         "symfony/polyfill-mbstring": "^1.22"
