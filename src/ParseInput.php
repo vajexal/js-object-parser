@@ -8,15 +8,16 @@ use Vajexal\JsObjectParser\Exception\ParserException;
 
 trait ParseInput
 {
-    private string $str;
+    private string $str = '';
     /** @var string[] */
-    private array  $chars;
+    private array  $chars    = [];
     private int    $position = 0;
-    private string $char;
+    private string $char     = '';
 
-    private function __construct(string $str)
+    private function init(string $str): void
     {
-        $this->str = $str;
+        $this->str      = $str;
+        $this->position = 0;
 
         $chars = preg_split('//u', $str, -1, PREG_SPLIT_NO_EMPTY);
         if ($chars === false) {

@@ -10,9 +10,18 @@ use Vajexal\JsObjectParser\JsObjectParser;
 
 class JsObjectParserTest extends TestCase
 {
+    private JsObjectParser $jsObjectParser;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->jsObjectParser = new JsObjectParser();
+    }
+
     public function testEmptyLiteral()
     {
-        $this->assertSame(null, JsObjectParser::parse(''));
+        $this->assertSame(null, $this->jsObjectParser->parse(''));
     }
 
     public function badLiterals(): array
@@ -35,19 +44,19 @@ class JsObjectParserTest extends TestCase
         $this->expectException(ParserException::class);
         $this->expectExceptionMessage($message);
 
-        JsObjectParser::parse($literal);
+        $this->jsObjectParser->parse($literal);
     }
 
     public function testNullLiteral()
     {
-        $this->assertSame(null, JsObjectParser::parse('null'));
-        $this->assertSame(null, JsObjectParser::parse('     null     '));
+        $this->assertSame(null, $this->jsObjectParser->parse('null'));
+        $this->assertSame(null, $this->jsObjectParser->parse('     null     '));
     }
 
     public function testBooleanLiteral()
     {
-        $this->assertSame(true, JsObjectParser::parse('true'));
-        $this->assertSame(false, JsObjectParser::parse('false'));
+        $this->assertSame(true, $this->jsObjectParser->parse('true'));
+        $this->assertSame(false, $this->jsObjectParser->parse('false'));
     }
 
     public function badNumerics(): array
@@ -83,31 +92,31 @@ class JsObjectParserTest extends TestCase
         $this->expectException(ParserException::class);
         $this->expectExceptionMessage($message);
 
-        JsObjectParser::parse($numeric);
+        $this->jsObjectParser->parse($numeric);
     }
 
     public function testNumericLiteral()
     {
-        $this->assertSame(0, JsObjectParser::parse('0'));
-        $this->assertSame(123, JsObjectParser::parse('123'));
-        $this->assertSame(123, JsObjectParser::parse('1_2_3'));
-        $this->assertSame(0, JsObjectParser::parse('0n'));
-        $this->assertSame(10, JsObjectParser::parse('10n'));
-        $this->assertSame(123, JsObjectParser::parse('1_2_3n'));
-        $this->assertSame(.1, JsObjectParser::parse('.1'));
-        $this->assertSame(1.2e3, JsObjectParser::parse('1.2e3'));
-        $this->assertSame(.2e3, JsObjectParser::parse('.2E+3'));
-        $this->assertSame(12.34e-5, JsObjectParser::parse('1_2.3_4E-5'));
-        $this->assertSame(123, JsObjectParser::parse('123n'));
-        $this->assertSame(0b101, JsObjectParser::parse('0b101'));
-        $this->assertSame(0b101, JsObjectParser::parse('0B1_0_1'));
-        $this->assertSame(0b101, JsObjectParser::parse('0b101n'));
-        $this->assertSame(0123, JsObjectParser::parse('0o123'));
-        $this->assertSame(0123, JsObjectParser::parse('0O1_2_3'));
-        $this->assertSame(0123, JsObjectParser::parse('0o123n'));
-        $this->assertSame(0x1a, JsObjectParser::parse('0x1a'));
-        $this->assertSame(0x1ab, JsObjectParser::parse('0X1_a_B'));
-        $this->assertSame(0x1a, JsObjectParser::parse('0x1an'));
+        $this->assertSame(0, $this->jsObjectParser->parse('0'));
+        $this->assertSame(123, $this->jsObjectParser->parse('123'));
+        $this->assertSame(123, $this->jsObjectParser->parse('1_2_3'));
+        $this->assertSame(0, $this->jsObjectParser->parse('0n'));
+        $this->assertSame(10, $this->jsObjectParser->parse('10n'));
+        $this->assertSame(123, $this->jsObjectParser->parse('1_2_3n'));
+        $this->assertSame(.1, $this->jsObjectParser->parse('.1'));
+        $this->assertSame(1.2e3, $this->jsObjectParser->parse('1.2e3'));
+        $this->assertSame(.2e3, $this->jsObjectParser->parse('.2E+3'));
+        $this->assertSame(12.34e-5, $this->jsObjectParser->parse('1_2.3_4E-5'));
+        $this->assertSame(123, $this->jsObjectParser->parse('123n'));
+        $this->assertSame(0b101, $this->jsObjectParser->parse('0b101'));
+        $this->assertSame(0b101, $this->jsObjectParser->parse('0B1_0_1'));
+        $this->assertSame(0b101, $this->jsObjectParser->parse('0b101n'));
+        $this->assertSame(0123, $this->jsObjectParser->parse('0o123'));
+        $this->assertSame(0123, $this->jsObjectParser->parse('0O1_2_3'));
+        $this->assertSame(0123, $this->jsObjectParser->parse('0o123n'));
+        $this->assertSame(0x1a, $this->jsObjectParser->parse('0x1a'));
+        $this->assertSame(0x1ab, $this->jsObjectParser->parse('0X1_a_B'));
+        $this->assertSame(0x1a, $this->jsObjectParser->parse('0x1an'));
     }
 
     public function badStrings(): array
@@ -133,25 +142,25 @@ class JsObjectParserTest extends TestCase
         $this->expectException(ParserException::class);
         $this->expectExceptionMessage($message);
 
-        JsObjectParser::parse($str);
+        $this->jsObjectParser->parse($str);
     }
 
     public function testStringLiteral()
     {
-        $this->assertSame('', JsObjectParser::parse("''"));
-        $this->assertSame('', JsObjectParser::parse('""'));
-        $this->assertSame('foo', JsObjectParser::parse('"foo"'));
-        $this->assertSame("f'oo", JsObjectParser::parse('"f\'oo"'));
-        $this->assertSame('f"oo', JsObjectParser::parse("'f\"oo'"));
-        $this->assertSame('f"oo', JsObjectParser::parse('"f\\"oo"'));
-        $this->assertSame("f'oo", JsObjectParser::parse("'f\\'oo'"));
-        $this->assertSame("\0", JsObjectParser::parse("'\\0'"));
-        $this->assertSame("\0" . '3', JsObjectParser::parse("'\\03'"));
-        $this->assertSame('a_b', JsObjectParser::parse("'\\x61\\u005F\\u{62}'"));
-        $this->assertSame("'", JsObjectParser::parse("'\\''"));
-        $this->assertSame("\n", JsObjectParser::parse("'\\n'"));
-        $this->assertSame("\n", JsObjectParser::parse("'\\\n'"));
-        $this->assertSame("\r\n", JsObjectParser::parse("'\\\r\n'"));
+        $this->assertSame('', $this->jsObjectParser->parse("''"));
+        $this->assertSame('', $this->jsObjectParser->parse('""'));
+        $this->assertSame('foo', $this->jsObjectParser->parse('"foo"'));
+        $this->assertSame("f'oo", $this->jsObjectParser->parse('"f\'oo"'));
+        $this->assertSame('f"oo', $this->jsObjectParser->parse("'f\"oo'"));
+        $this->assertSame('f"oo', $this->jsObjectParser->parse('"f\\"oo"'));
+        $this->assertSame("f'oo", $this->jsObjectParser->parse("'f\\'oo'"));
+        $this->assertSame("\0", $this->jsObjectParser->parse("'\\0'"));
+        $this->assertSame("\0" . '3', $this->jsObjectParser->parse("'\\03'"));
+        $this->assertSame('a_b', $this->jsObjectParser->parse("'\\x61\\u005F\\u{62}'"));
+        $this->assertSame("'", $this->jsObjectParser->parse("'\\''"));
+        $this->assertSame("\n", $this->jsObjectParser->parse("'\\n'"));
+        $this->assertSame("\n", $this->jsObjectParser->parse("'\\\n'"));
+        $this->assertSame("\r\n", $this->jsObjectParser->parse("'\\\r\n'"));
     }
 
     public function badArrays(): array
@@ -175,16 +184,16 @@ class JsObjectParserTest extends TestCase
         $this->expectException(ParserException::class);
         $this->expectExceptionMessage($message);
 
-        JsObjectParser::parse($arr);
+        $this->jsObjectParser->parse($arr);
     }
 
     public function testArrayLiteral()
     {
-        $this->assertSame([], JsObjectParser::parse('[]'));
-        $this->assertSame([123, 'foo'], JsObjectParser::parse('[123, "foo"]'));
-        $this->assertSame([[1]], JsObjectParser::parse('[[1]]'));
-        $this->assertSame([2 => 2, 4 => 4], JsObjectParser::parse('[,,2,,4]'));
-        $this->assertSame(['Ó', true], JsObjectParser::parse('["Ó", true]'));
+        $this->assertSame([], $this->jsObjectParser->parse('[]'));
+        $this->assertSame([123, 'foo'], $this->jsObjectParser->parse('[123, "foo"]'));
+        $this->assertSame([[1]], $this->jsObjectParser->parse('[[1]]'));
+        $this->assertSame([2 => 2, 4 => 4], $this->jsObjectParser->parse('[,,2,,4]'));
+        $this->assertSame(['Ó', true], $this->jsObjectParser->parse('["Ó", true]'));
     }
 
     public function badObjects(): array
@@ -217,18 +226,18 @@ class JsObjectParserTest extends TestCase
         $this->expectException(ParserException::class);
         $this->expectExceptionMessage($message);
 
-        JsObjectParser::parse($obj);
+        $this->jsObjectParser->parse($obj);
     }
 
     public function testObjectLiteral()
     {
-        $this->assertSame([], JsObjectParser::parse('{}'));
-        $this->assertSame(['foo' => 'bar'], JsObjectParser::parse('{foo: "bar"}'));
-        $this->assertSame(['foo' => 'baz'], JsObjectParser::parse('{foo: "bar", foo: "baz"}'));
-        $this->assertSame(['' => 1], JsObjectParser::parse('{"": 1}'));
-        $this->assertSame(['Ó' => 1], JsObjectParser::parse('{Ó: 1}'));
-        $this->assertSame(['a1' => 1, '_b' => 2, "\$\u{200C}" => 3], JsObjectParser::parse('{\u0061\u{31}: 1, \u{005f}\u{000062}: 2, \u{024}\u200C: 3}'));
-        $this->assertSame([1 => 2, 'foo' => 'bar', 'baz' => 'quux'], JsObjectParser::parse(<<<'JSON'
+        $this->assertSame([], $this->jsObjectParser->parse('{}'));
+        $this->assertSame(['foo' => 'bar'], $this->jsObjectParser->parse('{foo: "bar"}'));
+        $this->assertSame(['foo' => 'baz'], $this->jsObjectParser->parse('{foo: "bar", foo: "baz"}'));
+        $this->assertSame(['' => 1], $this->jsObjectParser->parse('{"": 1}'));
+        $this->assertSame(['Ó' => 1], $this->jsObjectParser->parse('{Ó: 1}'));
+        $this->assertSame(['a1' => 1, '_b' => 2, "\$\u{200C}" => 3], $this->jsObjectParser->parse('{\u0061\u{31}: 1, \u{005f}\u{000062}: 2, \u{024}\u200C: 3}'));
+        $this->assertSame([1 => 2, 'foo' => 'bar', 'baz' => 'quux'], $this->jsObjectParser->parse(<<<'JSON'
 {
     1: 2,
     foo: 'bar',
@@ -263,7 +272,7 @@ JSON
                     ],
                 ],
             ],
-            JsObjectParser::parse(<<<'JSON'
+            $this->jsObjectParser->parse(<<<'JSON'
 {
     name: 'Jim',
     age: 21,

@@ -20,11 +20,13 @@ use Vajexal\JsObjectParser\JsObjectParser;
 
 require_once 'vendor/autoload.php';
 
+$jsObjectParser = new JsObjectParser();
+
 var_dump(
-    JsObjectParser::parse('true'), // bool(true)
-    JsObjectParser::parse('123'), // int(123)
-    JsObjectParser::parse("'foo'"), // string(3) "foo"
-    JsObjectParser::parse('[1, 2]'), // array(2) { [0] => int(1) [1] => int(2) }
-    JsObjectParser::parse("{foo: 'bar'}") // array(1) { ["foo"] => string(3) "bar" }
+    $jsObjectParser->parse('true'), // bool(true)
+    $jsObjectParser->parse('123'), // int(123)
+    $jsObjectParser->parse("'foo'"), // string(3) "foo"
+    $jsObjectParser->parse('[1, 2]'), // array(2) { [0] => int(1) [1] => int(2) }
+    $jsObjectParser->parse("{foo: 'bar'}") // array(1) { ["foo"] => string(3) "bar" }
 );
 ```

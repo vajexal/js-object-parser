@@ -60,7 +60,7 @@ class JsObjectParser
      * @return mixed
      * @throws ParserException
      */
-    public static function parse(string $str): mixed
+    public function parse(string $str): mixed
     {
         $str = trim($str);
 
@@ -68,12 +68,12 @@ class JsObjectParser
             return null;
         }
 
-        $parser = new self($str);
+        $this->init($str);
 
-        $expression = $parser->parseExpression();
+        $expression = $this->parseExpression();
 
-        if ($parser->char !== '') {
-            $parser->unexpectedChar();
+        if ($this->char !== '') {
+            $this->unexpectedChar();
         }
 
         return $expression;
