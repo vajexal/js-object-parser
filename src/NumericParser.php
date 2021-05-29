@@ -124,9 +124,9 @@ trait NumericParser
 
     private function parseDecimal(): float|int
     {
-        $isFloat       = false;
-        $startPosition = $this->position;
-        $number        = $this->parseDecimalDigits();
+        $isFloat         = false;
+        $decimalPosition = $this->position;
+        $number          = $this->parseDecimalDigits();
 
         if ($this->char === '.') {
             $number  .= $this->char;
@@ -153,7 +153,7 @@ trait NumericParser
             $number .= $exponentPart = $this->parseDecimalDigits();
 
             if ($exponentPart === '') {
-                $this->moveTo($startPosition);
+                $this->moveTo($decimalPosition);
                 $this->parseError('Invalid decimal');
             }
         }

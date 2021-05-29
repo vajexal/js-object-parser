@@ -65,10 +65,10 @@ trait StringParser
         $name = '';
 
         if ($this->consumeString('\\u')) {
-            $startPosition = $this->position - 2;
-            $name          .= $unicodeChar = $this->parseUnicodeEscapeSequence();
+            $unicodeEscapeSequencePosition = $this->position - 2;
+            $name                          .= $unicodeChar = $this->parseUnicodeEscapeSequence();
             if (!$this->checkIdentifierStart($unicodeChar)) {
-                $this->invalidUnicodeEscapeSequence($startPosition);
+                $this->invalidUnicodeEscapeSequence($unicodeEscapeSequencePosition);
             }
         } elseif ($this->checkIdentifierStart($this->char)) {
             $name .= $this->char;
@@ -79,10 +79,10 @@ trait StringParser
 
         while (true) {
             if ($this->consumeString('\\u')) {
-                $startPosition = $this->position - 2;
-                $name          .= $unicodeChar = $this->parseUnicodeEscapeSequence();
+                $unicodeEscapeSequencePosition = $this->position - 2;
+                $name                          .= $unicodeChar = $this->parseUnicodeEscapeSequence();
                 if (!$this->checkIdentifierPart($unicodeChar)) {
-                    $this->invalidUnicodeEscapeSequence($startPosition);
+                    $this->invalidUnicodeEscapeSequence($unicodeEscapeSequencePosition);
                 }
                 continue;
             }
@@ -119,18 +119,18 @@ trait StringParser
 
     private function parseUnicodeEscapeSequence(): string
     {
-        $startPosition = $this->position - 2;
-        $code          = $this->char === '{' ? $this->parseCodePoint() : $this->parseHex4DigitsUnicodeEscapeSequence();
+        $unicodeEscapeSequencePosition = $this->position - 2;
+        $code                          = $this->char === '{' ? $this->parseCodePoint() : $this->parseHex4DigitsUnicodeEscapeSequence();
 
         $code = (int) hexdec($code);
 
         if ($code > self::MAX_CODE_POINT_VALUE) {
-            $this->invalidUnicodeEscapeSequence($startPosition);
+            $this->invalidUnicodeEscapeSequence($unicodeEscapeSequencePosition);
         }
 
         $char = mb_chr($code);
         if ($char === false) {
-            $this->invalidUnicodeEscapeSequence($startPosition);
+            $this->invalidUnicodeEscapeSequence($unicodeEscapeSequencePosition);
         }
 
         return $char;
@@ -138,8 +138,8 @@ trait StringParser
 
     private function parseCodePoint(): string
     {
-        $code          = '';
-        $startPosition = $this->position - 2;
+        $code              = '';
+        $codePointPosition = $this->position - 2;
         $this->nextChar();
 
         while ($this->char !== '}') {
@@ -149,7 +149,7 @@ trait StringParser
         $this->nextChar();
 
         if ($code === '') {
-            $this->invalidUnicodeEscapeSequence($startPosition);
+            $this->invalidUnicodeEscapeSequence($codePointPosition);
         }
 
         return $code;
@@ -157,15 +157,15 @@ trait StringParser
 
     private function parseHex4DigitsUnicodeEscapeSequence(): string
     {
-        $code          = '';
-        $startPosition = $this->position - 2;
+        $code              = '';
+        $hexDigitsPosition = $this->position - 2;
 
         for ($i = 0; $i < 4; $i++) {
             if (($this->char >= '0' && $this->char <= '9') || ($this->char >= 'a' && $this->char <= 'f') || ($this->char >= 'A' && $this->char <= 'F')) {
                 $code .= $this->char;
                 $this->nextChar();
             } else {
-                $this->invalidUnicodeEscapeSequence($startPosition);
+                $this->invalidUnicodeEscapeSequence($hexDigitsPosition);
             }
         }
 
@@ -174,8 +174,8 @@ trait StringParser
 
     private function parseHexEscapeSequence(): string
     {
-        $code          = '';
-        $startPosition = $this->position - 2;
+        $code                      = '';
+        $hexEscapeSequencePosition = $this->position - 2;
 
         for ($i = 0; $i < 2; $i++) {
             $code .= $this->parseHexDigit();
@@ -185,7 +185,7 @@ trait StringParser
 
         $char = mb_chr($code);
         if ($char === false) {
-            $this->invalidHexadecimalEscapeSequence($startPosition);
+            $this->invalidHexadecimalEscapeSequence($hexEscapeSequencePosition);
         }
 
         return $char;

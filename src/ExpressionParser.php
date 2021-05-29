@@ -46,10 +46,10 @@ trait ExpressionParser
             return $this->parseObject();
         }
 
-        $startPosition = $this->position;
-        $identifier    = $this->parseIdentifierName();
+        $identifierPosition = $this->position;
+        $identifier         = $this->parseIdentifierName();
         if ($identifier) {
-            $this->moveTo($startPosition);
+            $this->moveTo($identifierPosition);
             $this->parseError(sprintf('Unexpected identifier "%s"', $identifier));
         }
 
